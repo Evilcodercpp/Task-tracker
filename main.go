@@ -1,51 +1,56 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"net/http"									
-	// http.StatusOK        // 200
-	// http.StatusBadRequest // 400
-	// http.StatusCreated   // 201
-
-	//"github.com/Knetic/govaluate".  // библиотека для вычисления выражений, заданных в виде строки.
-	//"github.com/google/uuid"		// создание уникальных индификаторов
-	"github.com/labstack/echo/v4"	// основной пакет фреймворка Echo.
-	"github.com/labstack/echo/v4/middleware"	//
+	"net/http"
 )
 
+var task string
 
-var task string // хранение задачи
-
-type TaskRequest struct{
+type requestBody struct {
 	Task string `json:"task"`
 }
 
-func GetTask(c echo.Context) error{
-	if task == ""{
-		task = "exemple"
+func getTask(w http.ResponseWriter, r *http.Request) {
+	if task == "" {
+		task = "guest"
 	}
-	return c.JSON(http.StatusOK, fmt.Sprintf("Hello, %s", task))
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "hello, %s", task)
 }
-func PostTask(c echo.Context) error{
-	var req TaskRequest
 
-	if err := c.Bind(&req); err != nil{
-		return c.JSON(http.StatusBadRequest, map[string]string{"error":"ivalid request"})
+func postTask(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
 
-	task = req.Task			
+	var body requestBody
 
-	return c.JSON(http.StatusCreated, map[string]string{"task" : task})
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	task = body.Task
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "task saved")
 }
 
 func main() {
-	e := echo.New()								// Создаём новый сервер Echo.
+	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			getTask(w, r)
+		} else if r.Method == http.MethodPost {
+			postTask(w, r)
+		}
+	})
 
-	e.Use(middleware.CORS())					// Разрешает кросс-доменные запросы (полезно для фронтенда на другом домене).
-	e.Use(middleware.Logger())					// Логирует все запросы на сервер (метод, путь, статус, время).
-
-	e.GET("/task", GetTask)						// определение гет ручки
-	e.POST("/task", PostTask)					// определение пост ручки
-
-	e.Logger.Fatal(e.Start("localhost:8080"))	// старт сервера
+	fmt.Println("Server started on :8080")
+	http.ListenAndServe(":8080", nil)
 }
