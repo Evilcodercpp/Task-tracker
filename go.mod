@@ -1,4 +1,4 @@
-module myapp
+module github.com/Evilcodercpp/Task-tracker
 
 go 1.24.2
 
