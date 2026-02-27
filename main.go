@@ -3,130 +3,143 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type requestBody struct {
-	ID   string `json:"id"`
+var db *gorm.DB
+
+type Task struct {
+	ID   string `gorm:"primaryKey" json:"id"`
 	Task string `json:"task"`
 }
 
-// Хранилище задач
-var tasks []requestBody
+func initDB() {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"
+	}
 
-// GET /task
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("could not connect to database: %v", err)
+	}
+
+	if err := db.AutoMigrate(&Task{}); err != nil {
+		log.Fatalf("could not migrate database: %v", err)
+	}
+}
+
 func getTask(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	var tasks []Task
+	if err := db.Find(&tasks).Error; err != nil {
+		http.Error(w, "could not fetch tasks", http.StatusInternalServerError)
+		return
+	}
 
-	// Возвращаем весь список задач
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// POST /task
 func postTask(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	// 1. создаём пустую структуру
-	var body requestBody
-
-	// 2. декодируем JSON
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+	var body Task
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
-	// 3. генерируем уникальный ID
 	body.ID = uuid.NewString()
 
-	// 4. добавляем в хранилище
-	tasks = append(tasks, body)
+	if err := db.Create(&body).Error; err != nil {
+		http.Error(w, "could not create task", http.StatusInternalServerError)
+		return
+	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "task saved")
+	json.NewEncoder(w).Encode(body)
 }
 
-func PatchTask(w http.ResponseWriter, r *http.Request){
-	
-	if r.Method != http.MethodPatch {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	// 1. создаём пустую структуру
-	var body requestBody
-
-	// 2. декодируем JSON
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+func patchTask(w http.ResponseWriter, r *http.Request) {
+	var body Task
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
-	// ищем айди который нам нужно обновить 
-	for i, arr := range tasks{
-		if tasks[i].ID == body.ID 
-		// 3. обновляем данные в хранилище
-		tasks = append(tasks, body)
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "task update")
-	}
-}
-
-func DeleteTask(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodDelete {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	if body.ID == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
 
-	var body requestBody
+	var task Task
+	if err := db.First(&task, "id = ?", body.ID).Error; err != nil {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+	if body.Task != "" {
+		task.Task = body.Task
+	}
+
+	if err := db.Save(&task).Error; err != nil {
+		http.Error(w, "could not update task", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(task)
+}
+
+func deleteTask(w http.ResponseWriter, r *http.Request) {
+	var body Task
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
-	// ищем задачу по ID
-	for i := range tasks {
-		if tasks[i].ID == body.ID {
-
-			// удаляем элемент из slice
-			tasks = append(tasks[:i], tasks[i+1:]...)
-
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, "task deleted")
-			return
-		}
+	if body.ID == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
 	}
 
-	// если не нашли
-	http.Error(w, "task not found", http.StatusNotFound)
+	result := db.Delete(&Task{}, "id = ?", body.ID)
+	if result.Error != nil {
+		http.Error(w, "could not delete task", http.StatusInternalServerError)
+		return
+	}
+	if result.RowsAffected == 0 {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
+	initDB()
+
 	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			getTask(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			postTask(w, r)
-		} else if r.Method == http.MethodPatch{
-			PatchTask(w, r)
-		} else if r.Method == http.MethodDelete {
-			DeleteTask(w, r)
-		}else {
+		case http.MethodPatch:
+			patchTask(w, r)
+		case http.MethodDelete:
+			deleteTask(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
 	fmt.Println("Server started on :8080")
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
