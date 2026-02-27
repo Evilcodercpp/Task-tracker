@@ -5,61 +5,32 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/google/uuid"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-var db *gorm.DB
-
-type Task struct {
-	ID   string `gorm:"primaryKey" json:"id"`
+type requestBody struct {
+	ID   string `json:"id"`
 	Task string `json:"task"`
 }
 
-func initDB() {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"
-	}
-
-	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("could not connect to database: %v", err)
-	}
-
-	if err := db.AutoMigrate(&Task{}); err != nil {
-		log.Fatalf("could not migrate database: %v", err)
-	}
-}
+var tasks = []requestBody{}
 
 func getTask(w http.ResponseWriter, r *http.Request) {
-	var tasks []Task
-	if err := db.Find(&tasks).Error; err != nil {
-		http.Error(w, "could not fetch tasks", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(tasks)
 }
 
 func postTask(w http.ResponseWriter, r *http.Request) {
-	var body Task
+	var body requestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
 	body.ID = uuid.NewString()
-
-	if err := db.Create(&body).Error; err != nil {
-		http.Error(w, "could not create task", http.StatusInternalServerError)
-		return
-	}
+	tasks = append(tasks, body)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -67,7 +38,7 @@ func postTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func patchTask(w http.ResponseWriter, r *http.Request) {
-	var body Task
+	var body requestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -78,27 +49,23 @@ func patchTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var task Task
-	if err := db.First(&task, "id = ?", body.ID).Error; err != nil {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
+	for i := range tasks {
+		if tasks[i].ID == body.ID {
+			if body.Task != "" {
+				tasks[i].Task = body.Task
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(tasks[i])
+			return
+		}
 	}
 
-	if body.Task != "" {
-		task.Task = body.Task
-	}
-
-	if err := db.Save(&task).Error; err != nil {
-		http.Error(w, "could not update task", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
+	http.Error(w, "task not found", http.StatusNotFound)
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request) {
-	var body Task
+	var body requestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -109,22 +76,18 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := db.Delete(&Task{}, "id = ?", body.ID)
-	if result.Error != nil {
-		http.Error(w, "could not delete task", http.StatusInternalServerError)
-		return
-	}
-	if result.RowsAffected == 0 {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
+	for i := range tasks {
+		if tasks[i].ID == body.ID {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 	}
 
-	w.WriteHeader(http.StatusOK)
+	http.Error(w, "task not found", http.StatusNotFound)
 }
 
 func main() {
-	initDB()
-
 	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
