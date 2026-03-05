@@ -11,11 +11,20 @@ import (
 )
 
 func main() {
+	// 1. Подключаемся к базе данных
 	db.InitDB()
 
+	// 2. Создаём репозиторий — работает напрямую с БД
 	repo := taskservice.NewTaskRepo(db.DB)
-	h := handlers.NewHandler(repo)
 
+	// 3. Создаём сервис — содержит бизнес-логику, использует репозиторий
+	svc := taskservice.NewTaskService(repo)
+
+	// 4. Создаём хендлер — обрабатывает HTTP-запросы, использует сервис
+	// Цепочка: Handler → TaskService → TaskRepository → DB
+	h := handlers.NewHandler(svc)
+
+	// 5. Регистрируем маршрут /task
 	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -31,6 +40,7 @@ func main() {
 		}
 	})
 
+	// 6. Запускаем сервер
 	fmt.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
