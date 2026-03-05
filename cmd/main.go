@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"Task-tracker/interal/db"
-	"Task-tracker/interal/db/handlers"
-	taskservice "Task-tracker/interal/db/taskService"
+	"Task-tracker/interal"
+	"Task-tracker/interal/handlers"
+	taskservice "Task-tracker/interal/taskService"
 )
 
 func main() {

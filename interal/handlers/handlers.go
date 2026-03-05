@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	taskservice "Task-tracker/interal/db/taskService"
+	taskservice "Task-tracker/interal/taskService"
 
 	"github.com/google/uuid"
 )
