@@ -14,6 +14,11 @@ func main() {
 	// 1. Подключаемся к базе данных
 	db.InitDB()
 
+	// 1a. Автоматически создаём/обновляем таблицу task на основе модели
+	if err := db.DB.AutoMigrate(&taskservice.Task{}); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
+
 	// 2. Создаём репозиторий — работает напрямую с БД
 	repo := taskservice.NewTaskRepo(db.DB)
 
