@@ -20,3 +20,7 @@ migrate-down:
 # для удобства добавим команду run, которая будет запускать наше приложение
 run:
 	go run cmd/main.go
+
+# Таргет для генерации кода из OpenAPI спецификации
+gen:
+	oapi-codegen -config openapi/.openapi -include-tags tasks -package tasks openapi/openapi.yaml > ./interal/web/tasks/api.gen.go

@@ -4,7 +4,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// Task — модель задачи, соответствует таблице в базе данных
+// Task — модель задачи, соответствует таблице в базе данных.
+//
+// TODO: поле Task.Task — поле называется так же, как сама структура.
+// Это создаёт путаницу: task.Task — это текст задачи или вложенная задача?
+// Лучше переименовать поле в Title или Description, и обновить JSON-тег.
 type Task struct {
 	ID        string         `gorm:"primaryKey" json:"id"`
 	Task      string         `json:"task"`
