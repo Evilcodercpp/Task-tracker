@@ -26,3 +26,5 @@ gen:
 	oapi-codegen -config openapi/.openapi -include-tags tasks -package tasks openapi/openapi.yaml > ./interal/web/tasks/api.gen.go
 lint:
 	golangci-lint run --color=auto
+test:
+	go test -v ./... -cover
