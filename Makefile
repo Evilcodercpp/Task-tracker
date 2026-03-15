@@ -24,3 +24,5 @@ run:
 # Таргет для генерации кода из OpenAPI спецификации
 gen:
 	oapi-codegen -config openapi/.openapi -include-tags tasks -package tasks openapi/openapi.yaml > ./interal/web/tasks/api.gen.go
+lint:
+	golangci-lint run --color=auto
