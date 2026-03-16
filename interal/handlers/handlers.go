@@ -45,6 +45,31 @@ func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (ta
 	return response, nil
 }
 
+// GetTasksUserUserId возвращает все задачи конкретного пользователя.
+func (h *Handler) GetTasksUserUserId(_ context.Context, request tasks.GetTasksUserUserIdRequestObject) (tasks.GetTasksUserUserIdResponseObject, error) {
+	tasksByUser, err := h.svc.GetTasksByUserID(request.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	response := tasks.GetTasksUserUserId200JSONResponse{}
+
+	for _, tsk := range tasksByUser {
+		id := tsk.ID
+		text := tsk.Task
+		done := tsk.IsDone
+		userID := tsk.UserID
+		response = append(response, tasks.Task{
+			Id:     &id,
+			Task:   &text,
+			IsDone: &done,
+			UserId: &userID,
+		})
+	}
+
+	return response, nil
+}
+
 // PostTasks создаёт новую задачу.
 func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
 	// Проверка на nil: если клиент не передал поле task в теле запроса,
@@ -53,10 +78,15 @@ func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObj
 		return nil, errors.New("field 'task' is required")
 	}
 
+	if request.Body.UserId == nil {
+		return nil, errors.New("field 'user_id' is required")
+	}
+
 	taskToCreate := &taskservice.Task{
 		ID:     uuid.NewString(),
 		Task:   *request.Body.Task,
 		IsDone: false,
+		UserID: *request.Body.UserId,
 	}
 
 	if err := h.svc.CreateTask(taskToCreate); err != nil {
@@ -67,10 +97,13 @@ func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObj
 	text := taskToCreate.Task
 	done := taskToCreate.IsDone
 
+	userID := taskToCreate.UserID
+
 	return tasks.PostTasks201JSONResponse{
 		Id:     &id,
 		Task:   &text,
 		IsDone: &done,
+		UserId: &userID,
 	}, nil
 }
 

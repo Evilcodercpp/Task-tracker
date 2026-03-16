@@ -3,6 +3,8 @@ package userservice
 import (
 	"errors"
 	"log"
+
+	taskservice "Task-tracker/interal/taskService"
 )
 
 type UserService struct {
@@ -39,6 +41,18 @@ func (s *UserService) GetUserByID(id string) (*User, error) {
 		return nil, errors.New("id cannot be empty")
 	}
 	return s.repo.GetUserByID(id)
+}
+
+// GetTasksByUserID возвращает все задачи пользователя по его ID.
+func (s *UserService) GetTasksByUserID(userID string) ([]taskservice.Task, error) {
+	if userID == "" {
+		return nil, errors.New("user_id cannot be empty")
+	}
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	return user.Tasks, nil
 }
 
 func (s *UserService) UpdateUser(user *User) error {

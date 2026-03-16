@@ -26,6 +26,9 @@ func (s *TaskService) CreateTask(task *Task) error {
 	if len(task.Task) > 255 {
 		return errors.New("task text cannot exceed 255 characters")
 	}
+	if task.UserID == "" {
+        return errors.New("user_id cannot be empty")
+    }
 	task.IsDone = false // новая задача всегда не выполнена
 	return s.repo.CreateTask(task)
 }
@@ -40,6 +43,22 @@ func (s *TaskService) GetAllTasks() ([]Task, error) {
 	// не ошибка. Лишний шум в логах.
 	if len(tasks) == 0 {
 		log.Println("no tasks found")
+	}
+	return tasks, nil
+}
+
+// GetTasksByUserID возвращает задачи для конкретного пользователя.
+// Проверяет что userID не пустой и логирует если задач не найдено.
+func (s *TaskService) GetTasksByUserID(userID string) ([]Task, error) {
+	if userID == "" {
+		return nil, errors.New("user_id cannot be empty")
+	}
+	tasks, err := s.repo.GetTasksByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) == 0 {
+		log.Printf("no tasks found for user_id %s", userID)
 	}
 	return tasks, nil
 }

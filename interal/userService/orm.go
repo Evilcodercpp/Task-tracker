@@ -3,6 +3,8 @@ package userservice
 import (
 	"time"
 
+	taskservice "Task-tracker/interal/taskService"
+
 	"gorm.io/gorm"
 )
 
@@ -14,6 +16,7 @@ type User struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Tasks []taskservice.Task `gorm:"foreignKey:UserID" json:"tasks,omitempty"`
 }
 
 // TableName явно задаёт имя таблицы.

@@ -50,6 +50,16 @@ func (m *MockTaskRepository) UpdateTask(task *Task) error {
 	return args.Error(0)
 }
 
+// GetTasksByUserID имитирует получение всех задач конкретного пользователя.
+func (m *MockTaskRepository) GetTasksByUserID(userID string) ([]Task, error) {
+	args := m.Called(userID)
+	var tasks []Task
+	if res := args.Get(0); res != nil {
+		tasks = res.([]Task)
+	}
+	return tasks, args.Error(1)
+}
+
 // DeleteTask имитирует удаление задачи по строковому ID.
 // Возвращает только ошибку (nil — если удаление "прошло успешно" в тесте).
 func (m *MockTaskRepository) DeleteTask(ID string) error {

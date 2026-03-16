@@ -7,6 +7,7 @@ type TaskRepository interface {
 	CreateTask(tas *Task) error
 	GetAllTasks() ([]Task, error)
 	GetTaskByID(ID string) (*Task, error)
+	GetTasksByUserID(userID string) ([]Task, error)
 	UpdateTask(tas *Task) error
 	DeleteTask(ID string) error
 }
@@ -37,6 +38,11 @@ func (r *TaskRepo) GetTaskByID(ID string) (*Task, error) {
 	return &tas, nil
 }
 
+func (r *TaskRepo) GetTasksByUserID(userID string) ([]Task, error) {
+	var tasks []Task
+	err := r.db.Where("user_id = ?", userID).Find(&tasks).Error
+	return tasks, err
+}
 func (r *TaskRepo) UpdateTask(tas *Task) error {
 	return r.db.Save(tas).Error
 }

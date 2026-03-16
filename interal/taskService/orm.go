@@ -14,4 +14,9 @@ type Task struct {
 	Task      string         `json:"task"`
 	IsDone    bool           `json:"is_done"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"` // мягкое удаление
+	UserID    string         `gorm:"column:user_id" json:"user_id"`
+}
+
+func (Task) TableName() string {
+	return "tasks"
 }
