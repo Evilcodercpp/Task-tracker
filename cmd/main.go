@@ -9,15 +9,21 @@ import (
 	db "Task-tracker/interal"
 	"Task-tracker/interal/handlers"
 	taskservice "Task-tracker/interal/taskService"
+	userservice "Task-tracker/interal/userService"
 	"Task-tracker/interal/web/tasks"
+	"Task-tracker/interal/web/users"
 )
 
 func main() {
 	db.InitDB()
 
-	repo := taskservice.NewTaskRepo(db.DB)
-	svc := taskservice.NewTaskService(repo)
-	h := handlers.NewHandler(svc)
+	tasksRepo := taskservice.NewTaskRepo(db.DB)
+	tasksSvc := taskservice.NewTaskService(tasksRepo)
+	tasksHandler := handlers.NewHandler(tasksSvc)
+
+	userRepo := userservice.NewUserRepo(db.DB)
+	userSvc := userservice.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userSvc)
 
 	e := echo.New()
 
@@ -32,8 +38,11 @@ func main() {
 	}))
 	e.Use(middleware.Recover())
 
-	strictHandler := tasks.NewStrictHandler(h, nil)
-	tasks.RegisterHandlers(e, strictHandler)
+	strictTasksHandler := tasks.NewStrictHandler(tasksHandler, nil)
+	tasks.RegisterHandlers(e, strictTasksHandler)
+
+	strictUserHandler := users.NewStrictHandler(userHandler, nil)
+	users.RegisterHandlers(e, strictUserHandler)
 
 	// TODO: нет graceful shutdown.
 	// При Ctrl+C сервер убивается мгновенно, не дожидаясь завершения активных запросов.
