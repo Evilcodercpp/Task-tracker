@@ -45,6 +45,13 @@ func (s *Service) GetTaskByID(id uint) (*Task, error) {
 	return s.repo.GetByID(id)
 }
 
+func (s *Service) GetTasksByUserID(userID uint) ([]Task, int64, error) {
+	if userID == 0 {
+		return nil, 0, errors.New("user_id cannot be zero")
+	}
+	return s.repo.GetByUserID(userID)
+}
+
 func (s *Service) UpdateTaskByID(id uint, updates Task) (*Task, error) {
 	if updates.Title == "" {
 		return nil, errors.New("title cannot be empty")
@@ -54,6 +61,7 @@ func (s *Service) UpdateTaskByID(id uint, updates Task) (*Task, error) {
 		return nil, err
 	}
 	existing.Title = updates.Title
+	existing.IsDone = updates.IsDone
 	if err := s.repo.Update(existing); err != nil {
 		return nil, err
 	}

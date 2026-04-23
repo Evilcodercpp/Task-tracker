@@ -6,6 +6,7 @@ type Repository interface {
 	Create(task *Task) error
 	GetAll(page, pageSize int) ([]Task, int64, error)
 	GetByID(id uint) (*Task, error)
+	GetByUserID(userID uint) ([]Task, int64, error)
 	Update(task *Task) error
 	Delete(id uint) error
 }
@@ -41,6 +42,12 @@ func (r *repo) GetByID(id uint) (*Task, error) {
 		return nil, err
 	}
 	return &task, nil
+}
+
+func (r *repo) GetByUserID(userID uint) ([]Task, int64, error) {
+	var tasks []Task
+	err := r.db.Where("user_id = ?", userID).Find(&tasks).Error
+	return tasks, int64(len(tasks)), err
 }
 
 func (r *repo) Update(task *Task) error {

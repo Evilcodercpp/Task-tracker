@@ -3,12 +3,15 @@ package task;
 option go_package = "github.com/Evilcodercpp/project-protos/proto/task";
 
 message Task {
-  uint32 id    = 1;
-  string title = 2;
+  uint32 id      = 1;
+  string title   = 2;
+  uint32 user_id = 3;
+  bool   is_done = 4;
 }
 
 message CreateTaskRequest {
-  string title = 1;
+  string title   = 1;
+  uint32 user_id = 2;
 }
 message CreateTaskResponse {
   Task task = 1;
@@ -22,8 +25,9 @@ message GetTaskResponse {
 }
 
 message UpdateTaskRequest {
-  uint32 id    = 1;
-  string title = 2;
+  uint32 id      = 1;
+  string title   = 2;
+  bool   is_done = 3;
 }
 message UpdateTaskResponse {
   Task task = 1;
@@ -45,10 +49,18 @@ message ListTasksResponse {
   uint32 total        = 2;
 }
 
+message ListTasksByUserRequest {
+  uint32 user_id = 1;
+}
+message ListTasksByUserResponse {
+  repeated Task tasks = 1;
+}
+
 service TaskService {
-  rpc CreateTask (CreateTaskRequest) returns (CreateTaskResponse);
-  rpc GetTask    (GetTaskRequest)    returns (GetTaskResponse);
-  rpc UpdateTask (UpdateTaskRequest) returns (UpdateTaskResponse);
-  rpc DeleteTask (DeleteTaskRequest) returns (DeleteTaskResponse);
-  rpc ListTasks  (ListTasksRequest)  returns (ListTasksResponse);
+  rpc CreateTask       (CreateTaskRequest)       returns (CreateTaskResponse);
+  rpc GetTask          (GetTaskRequest)          returns (GetTaskResponse);
+  rpc UpdateTask       (UpdateTaskRequest)       returns (UpdateTaskResponse);
+  rpc DeleteTask       (DeleteTaskRequest)       returns (DeleteTaskResponse);
+  rpc ListTasks        (ListTasksRequest)        returns (ListTasksResponse);
+  rpc ListTasksByUser  (ListTasksByUserRequest)  returns (ListTasksByUserResponse);
 }
