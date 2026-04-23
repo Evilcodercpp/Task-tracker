@@ -7,29 +7,30 @@ type TaskRepository interface {
 	CreateTask(tas *Task) error
 	GetAllTasks() ([]Task, error)
 	GetTaskByID(ID string) (*Task, error)
+	GetTasksByUserID(userID string) ([]Task, error)
 	UpdateTask(tas *Task) error
 	DeleteTask(ID string) error
 }
 
-type TasRepo struct {
+type TaskRepo struct {
 	db *gorm.DB
 }
 
 func NewTaskRepo(db *gorm.DB) TaskRepository {
-	return &TasRepo{db: db}
+	return &TaskRepo{db: db}
 }
 
-func (r *TasRepo) CreateTask(tas *Task) error {
+func (r *TaskRepo) CreateTask(tas *Task) error {
 	return r.db.Create(tas).Error
 }
 
-func (r *TasRepo) GetAllTasks() ([]Task, error) {
+func (r *TaskRepo) GetAllTasks() ([]Task, error) {
 	var tasks []Task
 	err := r.db.Find(&tasks).Error
 	return tasks, err
 }
 
-func (r *TasRepo) GetTaskByID(ID string) (*Task, error) {
+func (r *TaskRepo) GetTaskByID(ID string) (*Task, error) {
 	var tas Task
 	if err := r.db.First(&tas, "id = ?", ID).Error; err != nil {
 		return nil, err
@@ -37,10 +38,15 @@ func (r *TasRepo) GetTaskByID(ID string) (*Task, error) {
 	return &tas, nil
 }
 
-func (r *TasRepo) UpdateTask(tas *Task) error {
+func (r *TaskRepo) GetTasksByUserID(userID string) ([]Task, error) {
+	var tasks []Task
+	err := r.db.Where("user_id = ?", userID).Find(&tasks).Error
+	return tasks, err
+}
+func (r *TaskRepo) UpdateTask(tas *Task) error {
 	return r.db.Save(tas).Error
 }
 
-func (r *TasRepo) DeleteTask(ID string) error {
+func (r *TaskRepo) DeleteTask(ID string) error {
 	return r.db.Delete(&Task{}, "id = ?", ID).Error
 }

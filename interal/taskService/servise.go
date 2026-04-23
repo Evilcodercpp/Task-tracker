@@ -26,19 +26,39 @@ func (s *TaskService) CreateTask(task *Task) error {
 	if len(task.Task) > 255 {
 		return errors.New("task text cannot exceed 255 characters")
 	}
+	if task.UserID == "" {
+        return errors.New("user_id cannot be empty")
+    }
 	task.IsDone = false // новая задача всегда не выполнена
 	return s.repo.CreateTask(task)
 }
 
 // GetAllTasks возвращает все задачи.
-// Логирует если задач нет.
 func (s *TaskService) GetAllTasks() ([]Task, error) {
 	tasks, err := s.repo.GetAllTasks()
 	if err != nil {
 		return nil, err
 	}
+	// TODO: логировать пустой список не нужно — это нормальное состояние,
+	// не ошибка. Лишний шум в логах.
 	if len(tasks) == 0 {
 		log.Println("no tasks found")
+	}
+	return tasks, nil
+}
+
+// GetTasksByUserID возвращает задачи для конкретного пользователя.
+// Проверяет что userID не пустой и логирует если задач не найдено.
+func (s *TaskService) GetTasksByUserID(userID string) ([]Task, error) {
+	if userID == "" {
+		return nil, errors.New("user_id cannot be empty")
+	}
+	tasks, err := s.repo.GetTasksByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) == 0 {
+		log.Printf("no tasks found for user_id %s", userID)
 	}
 	return tasks, nil
 }
@@ -60,7 +80,9 @@ func (s *TaskService) UpdateTask(task *Task) error {
 	}
 	existing, err := s.repo.GetTaskByID(task.ID)
 	if err != nil {
-		return errors.New("task not found")
+		// Ранее здесь оригинальная ошибка терялась — теперь пробрасываем её.
+		// Это позволяет отличить "запись не найдена" от ошибки БД.
+		return err
 	}
 	existing.Task = task.Task
 	existing.IsDone = task.IsDone
